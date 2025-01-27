@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'admin/admin_page.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -279,6 +280,15 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: hexToColor(toolbarColor) ?? Colors.blue,
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Icon(Icons.admin_panel_settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AdminPage()),
+              );
+            },
+          ),
           if (toolbarMenu.isNotEmpty)
             IconButton(
               icon: Icon(Icons.menu),
