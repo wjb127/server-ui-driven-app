@@ -70,7 +70,7 @@ class _AppManagementTabState extends State<AppManagementTab> {
 
   Future<void> fetchApps() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/apps'));
+      final response = await http.get(Uri.parse('http://192.168.0.6:3000/api/apps'));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
@@ -89,7 +89,7 @@ class _AppManagementTabState extends State<AppManagementTab> {
   Future<void> createApp(Map<String, dynamic> appData) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:3000/api/app'),
+        Uri.parse('http://192.168.0.6:3000/api/app'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(appData),
       );
@@ -104,7 +104,7 @@ class _AppManagementTabState extends State<AppManagementTab> {
   Future<void> updateApp(String id, Map<String, dynamic> appData) async {
     try {
       final response = await http.put(
-        Uri.parse('http://localhost:3000/api/app/$id'),
+        Uri.parse('http://192.168.0.6:3000/api/app/$id'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(appData),
       );
@@ -119,7 +119,7 @@ class _AppManagementTabState extends State<AppManagementTab> {
   Future<void> deleteApp(String id) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:3000/api/app/$id'),
+        Uri.parse('http://192.168.0.6:3000/api/app/$id'),
       );
       if (response.statusCode == 200) {
         fetchApps();  // 목록 새로고침
@@ -180,17 +180,16 @@ class _AppManagementTabState extends State<AppManagementTab> {
   }
 
   void _showEditDialog(Map<String, dynamic> app) {
-    // 앱 수정 다이얼로그 구현
     showDialog(
       context: context,
       builder: (context) => AppFormDialog(
         app: app,
-        onSubmit: (data) => updateApp(app['id'], data),
+        onSubmit: (data) => updateApp(app['id'].toString(), data),
       ),
     );
   }
 
-  void _showDeleteConfirmation(String id) {
+  void _showDeleteConfirmation(dynamic id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -203,7 +202,7 @@ class _AppManagementTabState extends State<AppManagementTab> {
           ),
           TextButton(
             onPressed: () {
-              deleteApp(id);
+              deleteApp(id.toString());
               Navigator.pop(context);
             },
             child: Text('삭제'),

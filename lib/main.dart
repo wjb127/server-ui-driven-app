@@ -98,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> fetchStyleData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/style/${appStyleId}'));
+      final response = await http.get(Uri.parse('http://192.168.0.6:3000/api/style/${appStyleId}'));
       print('스타일 API 응답: ${response.body}');
       
       if (response.statusCode == 200) {
@@ -120,7 +120,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> fetchToolbarData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/toolbar/${appToolbarId}'));
+      final response = await http.get(Uri.parse('http://192.168.0.6:3000/api/toolbar/${appToolbarId}'));
       print('툴바 API 응답: ${response.body}');
       
       if (response.statusCode == 200) {
@@ -128,8 +128,17 @@ class _MyHomePageState extends State<MyHomePage> {
         print('받아온 툴바 데이터: $toolbarData');
         
         setState(() {
-          toolbarItems = Map<String, String>.from(toolbarData['toolbar_items'] ?? {});
+          // toolbar_items의 값이 "Y"인 항목들에 대해 적절한 레이블 매핑
+          Map<String, dynamic> rawItems = toolbarData['toolbar_items'] ?? {};
+          toolbarItems = {};
+          
+          if (rawItems['home'] == 'Y') toolbarItems['home'] = 'Home';
+          if (rawItems['profile'] == 'Y') toolbarItems['profile'] = 'Profile';
+          if (rawItems['settings'] == 'Y') toolbarItems['settings'] = 'Settings';
+          
           toolbarStatus = toolbarData['active_status'] ?? '';
+          toolbarTitle = 'App Menu';  // 기본값 설정
+          toolbarSubtitle = '';  // 기본값 설정
         });
       }
     } catch (e) {
@@ -139,19 +148,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> fetchMenuData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/menu/app/${id}'));
+      final response = await http.get(Uri.parse('http://192.168.0.6:3000/api/menu/app/${id}'));
       print('메뉴 API 응답: ${response.body}');
       
       if (response.statusCode == 200) {
-        // 배열 형태의 응답을 처리
+        // 배열에서 첫 번째 메뉴 항목 가져오기
         List<dynamic> menuList = jsonDecode(response.body);
         if (menuList.isNotEmpty) {
-          // 첫 번째 메뉴 항목 사용
           Map<String, dynamic> menuData = menuList[0];
           print('받아온 메뉴 데이터: $menuData');
           
           setState(() {
-            menuId = menuData['id'] ?? '';
+            menuId = menuData['id']?.toString() ?? '';
             menuTitle = menuData['title'] ?? '';
             menuDescription = menuData['description'] ?? '';
             menuPosition = menuData['position'] ?? 0;
@@ -169,7 +177,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> fetchFcmTopicData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/fcm_topic/app/3'));
+      final response = await http.get(Uri.parse('http://192.168.0.6:3000/api/fcm_topic/app/${id}'));
       print('FCM 토픽 API 응답: ${response.body}');
       
       if (response.statusCode == 200) {
@@ -179,7 +187,7 @@ class _MyHomePageState extends State<MyHomePage> {
           print('받아온 FCM 토픽 데이터: $topicData');
           
           setState(() {
-            fcmTopicId = topicData['id'] ?? '';
+            fcmTopicId = topicData['id']?.toString() ?? '';
             fcmTopicTitle = topicData['title'] ?? '';
             fcmTopic = topicData['fcm_topic'] ?? '';
             fcmTopicType = topicData['type'] ?? '';
@@ -187,7 +195,8 @@ class _MyHomePageState extends State<MyHomePage> {
             
             // translation_title_json 처리
             if (topicData['translation_title_json'] != null) {
-              fcmTopicTranslations = Map<String, String>.from(topicData['translation_title_json']);
+              Map<String, dynamic> translations = topicData['translation_title_json'];
+              fcmTopicTranslations = translations.map((key, value) => MapEntry(key, value.toString()));
             } else {
               fcmTopicTranslations = {};
             }
@@ -201,19 +210,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> fetchAppData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/api/app/3'));
+      final response = await http.get(Uri.parse('http://192.168.0.6:3000/api/app/3'));
       print('앱 데이터 응답: ${response.body}');
       
       if (response.statusCode == 200) {
         Map<String, dynamic> data = jsonDecode(response.body);
         setState(() {
-          id = data['id'] ?? '';
+          id = data['id'].toString();
           name = data['name'] ?? '로딩 실패';
           packageName = data['package_name'] ?? '';
-          adsEnabled = data['ads_status']['enabled'] ?? false;
+          adsEnabled = data['ads_status']?['enabled'] ?? false;
           activeStatus = data['active_status'] ?? '';
-          appStyleId = data['app_style_id'] ?? '';
-          appToolbarId = data['app_toolbar_id'] ?? '';
+          appStyleId = data['app_style_id']?.toString() ?? '';
+          appToolbarId = data['app_toolbar_id']?.toString() ?? '';
         });
         
         if (id.isNotEmpty) {
@@ -454,17 +463,85 @@ class _MyHomePageState extends State<MyHomePage> {
                           Text('툴바 정보', 
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
                           Divider(),
-                          Text('툴바 메뉴: $toolbarMenu', 
-                            style: TextStyle(fontSize: 16)),
-                          SizedBox(height: 8),
-                          Text('툴바 제목: $toolbarTitle', 
-                            style: TextStyle(fontSize: 16)),
-                          SizedBox(height: 8),
-                          Text('툴바 부제목: $toolbarSubtitle', 
-                            style: TextStyle(fontSize: 16)),
-                          SizedBox(height: 8),
-                          Text('툴바 상태: $toolbarStatus', 
-                            style: TextStyle(fontSize: 16)),
+                          // 툴바 메뉴 상태
+                          ListTile(
+                            leading: Icon(Icons.menu),
+                            title: Text('툴바 메뉴'),
+                            trailing: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                toolbarMenu.isNotEmpty ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarMenu.isNotEmpty ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
+                          ),
+                          // 툴바 제목 상태
+                          ListTile(
+                            leading: Icon(Icons.title),
+                            title: Text('툴바 제목'),
+                            subtitle: Text(toolbarTitle),
+                            trailing: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                toolbarTitle.isNotEmpty ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarTitle.isNotEmpty ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
+                          ),
+                          // 툴바 부제목 상태
+                          ListTile(
+                            leading: Icon(Icons.subtitles),
+                            title: Text('툴바 부제목'),
+                            subtitle: Text(toolbarSubtitle),
+                            trailing: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                toolbarSubtitle.isNotEmpty ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarSubtitle.isNotEmpty ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
+                          ),
+                          // 툴바 활성화 상태
+                          ListTile(
+                            leading: Icon(Icons.check_circle_outline),
+                            title: Text('툴바 상태'),
+                            subtitle: Text(toolbarStatus),
+                            trailing: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                toolbarStatus == 'ACTIVE' ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarStatus == 'ACTIVE' ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -480,41 +557,63 @@ class _MyHomePageState extends State<MyHomePage> {
                           Text('툴바 설정', 
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
                           Divider(),
+                          // 홈 메뉴 상태
                           ListTile(
                             leading: Icon(Icons.home),
                             title: Text('홈'),
-                            subtitle: Text(toolbarItems.containsKey('home') ? toolbarItems['home']! : '없음'),
                             trailing: Container(
                               padding: EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: toolbarItems.containsKey('home') ? Colors.green : Colors.red,
+                                color: Colors.grey.shade200,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                toolbarItems.containsKey('home') ? '활성화' : '비활성화',
-                                style: TextStyle(color: Colors.white),
+                                toolbarItems.containsKey('home') ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarItems.containsKey('home') ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
                               ),
                             ),
                           ),
+                          // 프로필 메뉴 상태
+                          ListTile(
+                            leading: Icon(Icons.person),
+                            title: Text('프로필'),
+                            trailing: Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                toolbarItems.containsKey('profile') ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarItems.containsKey('profile') ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
+                              ),
+                            ),
+                          ),
+                          // 설정 메뉴 상태
                           ListTile(
                             leading: Icon(Icons.settings),
                             title: Text('설정'),
-                            subtitle: Text(toolbarItems.containsKey('settings') ? toolbarItems['settings']! : '없음'),
                             trailing: Container(
                               padding: EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: toolbarItems.containsKey('settings') ? Colors.green : Colors.red,
+                                color: Colors.grey.shade200,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                toolbarItems.containsKey('settings') ? '활성화' : '비활성화',
-                                style: TextStyle(color: Colors.white),
+                                toolbarItems.containsKey('settings') ? 'Y' : 'N',
+                                style: TextStyle(
+                                  color: toolbarItems.containsKey('settings') ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold
+                                ),
                               ),
                             ),
                           ),
-                          SizedBox(height: 8),
-                          Text('툴바 상태: $toolbarStatus', 
-                            style: TextStyle(fontSize: 16)),
                         ],
                       ),
                     ),
